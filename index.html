@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cinematic Winter - Santa Upgrade</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
     <style>
@@ -12,7 +12,14 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #010305; font-family: 'Montserrat', sans-serif; cursor: grab; }
+        body { 
+            overflow: hidden; 
+            background: #010305; 
+            font-family: 'Montserrat', sans-serif; 
+            cursor: grab;
+            /* Quan trọng: Ngăn chặn các thao tác mặc định của trình duyệt trên mobile */
+            touch-action: none; 
+        }
         body:active { cursor: grabbing; }
         canvas { display: block; width: 100%; height: 100vh; }
         
@@ -289,7 +296,6 @@
 
         loader.load('./reindeer_3d_model.glb', (glb) => {
             reindeerBase = glb.scene;
-            // Fix hướng cho reindeer: quay 180 độ nếu model bị ngược
             reindeerBase.rotation.y = Math.PI; 
             modelsLoaded++;
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
@@ -297,7 +303,6 @@
 
         loader.load('./santa_sleigh_3d_model.glb', (glb) => {
             sleighBase = glb.scene;
-            // Fix hướng cho sleigh
             sleighBase.rotation.y = Math.PI;
             modelsLoaded++;
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
@@ -305,46 +310,34 @@
 
         function spawnSanta() {
             if(!reindeerBase || !sleighBase) return;
-
             const group = new THREE.Group();
-            
-            // 1. Cỗ xe
             const sleigh = sleighBase.clone();
             sleigh.scale.set(2, 2, 2);
             group.add(sleigh);
-
-            // 2. Tuần lộc
             const reindeers = [];
             for(let i=0; i<6; i++) {
                 const r = reindeerBase.clone();
                 r.scale.set(1.5, 1.5, 1.5);
                 const x = (i % 2 === 0) ? 1.2 : -1.2;
-                const z = 5 + Math.floor(i/2) * 3.5; // Xếp phía trước xe (Trục Z dương)
+                const z = 5 + Math.floor(i/2) * 3.5;
                 r.position.set(x, 0, z);
                 group.add(r);
                 reindeers.push(r);
             }
-
-            // Đèn gầm xe
             const light = new THREE.PointLight(0xff0000, 10, 25);
             light.position.set(0, 1, 0);
             group.add(light);
-
-            // 3. LOGIC ĐƯỜNG BAY
             let points = [];
             flightCount++;
-
-            // Mỗi 3 lần bay hoặc lần đầu tiên sẽ có 1 lần Dive từ Aurora xuống Tree
             if (flightCount % 3 === 1 || flightCount === 1) {
                 points = [
-                    new THREE.Vector3(-150, 60, -100), // Từ trên cao dãy Aurora
+                    new THREE.Vector3(-150, 60, -100),
                     new THREE.Vector3(-50, 30, -50),
-                    new THREE.Vector3(0, 8, 15),     // Sát ngọn/gần cây thông
+                    new THREE.Vector3(0, 8, 15),
                     new THREE.Vector3(50, 25, 60),
-                    new THREE.Vector3(150, 70, 120)   // Vút lên trời lại
+                    new THREE.Vector3(150, 70, 120)
                 ];
             } else {
-                // Bay ngẫu nhiên xung quanh không gian
                 const side = Math.random() > 0.5 ? 1 : -1;
                 points = [
                     new THREE.Vector3(150 * side, 20 + Math.random()*30, -100),
@@ -352,7 +345,6 @@
                     new THREE.Vector3(150 * -side, 30 + Math.random()*40, 100)
                 ];
             }
-
             const curve = new THREE.CatmullRomCurve3(points);
             scene.add(group);
             activeSleighs.push({ group, reindeers, curve, progress: 0 });
@@ -361,47 +353,101 @@
         function updateSleighs(time) {
             for(let i = activeSleighs.length - 1; i >= 0; i--) {
                 const s = activeSleighs[i];
-                // GIẢM TỐC ĐỘ: từ 0.0015 xuống 0.0006 để bay chậm hơn
                 s.progress += 0.0006; 
-
                 if(s.progress >= 1) {
                     scene.remove(s.group);
                     activeSleighs.splice(i, 1);
                     continue;
                 }
-
                 const pos = s.curve.getPoint(s.progress);
                 s.group.position.copy(pos);
-                
-                // Hướng mũi xe và tuần lộc đúng hướng đi
                 const lookAtPos = s.curve.getPoint(Math.min(s.progress + 0.01, 1));
                 s.group.lookAt(lookAtPos);
-
-                // Hiệu ứng tuần lộc chạy
                 s.reindeers.forEach((r, idx) => {
                     r.position.y = Math.sin(time * 6 + idx) * 0.4;
                 });
             }
-
             if(isIntroFinished && activeSleighs.length === 0) {
-                // Tỉ lệ xuất hiện Santa mới sau khi kết thúc đợt bay cũ
                 if(Math.random() < 0.01) spawnSanta();
             }
         }
 
-        // --- INTERACTIONS (Giữ nguyên) ---
-        let targetAngleX = 0, targetAngleY = 0.2, currentAngleX = 0, currentAngleY = 0.2, isMouseDown = false, currentDistance = 180;
-        const targetDistance = 25;
+        // --- NEW INTERACTIONS (FIXED FOR MOBILE & ZOOM) ---
+        let targetAngleX = 0, targetAngleY = 0.2;
+        let currentAngleX = 0, currentAngleY = 0.2;
+        let isMouseDown = false;
+        let currentDistance = 180;
+        let targetDistance = 25; // Sẽ được cập nhật khi người dùng zoom
 
+        // Biến lưu trữ cho Mobile
+        let lastTouchX = 0, lastTouchY = 0;
+        let pinchStartDist = 0;
+        let initialZoomDistance = 25;
+
+        // 1. CHUỘT (Máy tính)
         window.addEventListener('mousedown', () => isMouseDown = true);
         window.addEventListener('mouseup', () => isMouseDown = false);
         window.addEventListener('mousemove', (e) => {
             if(isMouseDown) {
                 targetAngleX += e.movementX * 0.005;
                 targetAngleY += e.movementY * 0.005;
-                targetAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, targetAngleY));
+                limitAngleY();
             }
         });
+        // Cuộn chuột để zoom
+        window.addEventListener('wheel', (e) => {
+            if (!isIntroFinished) return;
+            targetDistance += e.deltaY * 0.05;
+            limitDistance();
+        });
+
+        // 2. CẢM ỨNG (Điện thoại)
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                lastTouchX = e.touches[0].pageX;
+                lastTouchY = e.touches[0].pageY;
+            } else if (e.touches.length === 2) {
+                // Bắt đầu pinch zoom
+                pinchStartDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                initialZoomDistance = targetDistance;
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Ngăn cuộn trang
+
+            if (e.touches.length === 1) {
+                // Lướt xoay camera
+                const dx = e.touches[0].pageX - lastTouchX;
+                const dy = e.touches[0].pageY - lastTouchY;
+                targetAngleX += dx * 0.008;
+                targetAngleY += dy * 0.008;
+                lastTouchX = e.touches[0].pageX;
+                lastTouchY = e.touches[0].pageY;
+                limitAngleY();
+            } else if (e.touches.length === 2) {
+                // Phóng to/Thu nhỏ bằng 2 ngón
+                const currentDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                const zoomFactor = pinchStartDist / currentDist;
+                targetDistance = initialZoomDistance * zoomFactor;
+                limitDistance();
+            }
+        }, { passive: false });
+
+        function limitAngleY() {
+            targetAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, targetAngleY));
+        }
+
+        function limitDistance() {
+            // Giới hạn zoom: min 10 (gần), max 150 (xa)
+            targetDistance = Math.max(10, Math.min(150, targetDistance));
+        }
 
         function dismissGreeting() {
             initAudio();
@@ -434,8 +480,12 @@
             updateSleighs(delta);
 
             if (isIntroFinished) {
-                currentDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.03);
-                targetAngleX += 0.0015;
+                // Di chuyển camera về targetDistance (bao gồm cả khi người dùng zoom)
+                currentDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.05);
+                // Xoay tự động khi không chạm màn hình
+                if (!isMouseDown && pinchStartDist === 0) {
+                    targetAngleX += 0.0015;
+                }
             }
             
             currentAngleX = THREE.MathUtils.lerp(currentAngleX, targetAngleX, 0.1);
