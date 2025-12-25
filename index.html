@@ -280,14 +280,14 @@
 
         const loader = new THREE.GLTFLoader();
         
-        loader.load('./assets/christmas tree 3d model.glb', (gltf) => {
+        loader.load('./assets/christmas_tree_3d_model.glb', (gltf) => {
             gltf.scene.scale.set(4, 4, 4);
             scene.add(gltf.scene);
             modelsLoaded++;
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
         });
 
-        loader.load('./reindeer 3d model.glb', (gltf) => {
+        loader.load('./reindeer_3d_model.glb', (gltf) => {
             reindeerBase = gltf.scene;
             // Fix hướng cho reindeer: quay 180 độ nếu model bị ngược
             reindeerBase.rotation.y = Math.PI; 
@@ -295,7 +295,7 @@
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
         });
 
-        loader.load('./santa sleigh 3d model.glb', (gltf) => {
+        ('./santa_sleigh_3d_model.glb', (gltf) => {
             sleighBase = gltf.scene;
             // Fix hướng cho sleigh
             sleighBase.rotation.y = Math.PI;
