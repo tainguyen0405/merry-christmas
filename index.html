@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic Winter - Santa Upgrade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --music-intensity: 0;
+            --btn-glow: rgba(255, 210, 125, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #010305; font-family: 'Montserrat', sans-serif; cursor: grab; }
+        body:active { cursor: grabbing; }
+        canvas { display: block; width: 100%; height: 100vh; }
+        
+        #loading {
+            position: fixed; inset: 0; background: #050a10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; color: #fff;
+        }
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1); border-top: 2px solid #FFD27D;
+            border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #greeting-overlay {
+            position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at center, rgba(5, 15, 25, 0.8) 0%, #02050a 100%);
+            transition: all 3s cubic-bezier(0.645, 0.045, 0.355, 1); text-align: center; color: #fff; 
+            backdrop-filter: blur(20px);
+        }
+        .greeting-content { max-width: 900px; padding: 40px; transform: scale(0.9); transition: 2s; }
+        #greeting-overlay.visible .greeting-content { transform: scale(1); }
+
+        .sub-title { 
+            font-family: 'Great Vibes', cursive; font-size: clamp(1.8rem, 5vw, 3rem); 
+            color: #FFD27D; margin-bottom: 15px; opacity: 0; 
+            filter: blur(10px); animation: cinematicIn 2s forwards 0.5s; 
+        }
+        .main-title { 
+            font-family: 'Cinzel', serif; font-size: clamp(2.5rem, 8vw, 6rem); letter-spacing: 20px; 
+            background: linear-gradient(to bottom, #fff 40%, #a0c4ff 100%); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            margin-bottom: 30px; opacity: 0; filter: blur(15px);
+            animation: cinematicIn 2.5s forwards 1.2s;
+            text-shadow: 0 0 30px rgba(255,255,255,0.2);
+        }
+        .message { 
+            font-weight: 300; color: rgba(255, 255, 255, 0.6); letter-spacing: 8px; 
+            text-transform: uppercase; font-size: 0.9rem; margin-bottom: 50px; 
+            opacity: 0; animation: cinematicIn 2s forwards 2s; 
+        }
+
+        @keyframes cinematicIn {
+            to { opacity: 1; filter: blur(0); transform: translateY(0); }
+        }
+
+        .explore-btn { 
+            position: relative; padding: 22px 70px; background: rgba(0, 0, 0, 0.3); 
+            border: 2px solid #FFD27D; color: #FFD27D;
+            font-family: 'Cinzel', serif; font-size: 1rem; letter-spacing: 6px; 
+            cursor: pointer; overflow: hidden; transition: 0.3s;
+            opacity: 0; animation: cinematicIn 1.5s forwards 2.8s;
+            transform: scale(calc(1 + var(--music-intensity) * 0.15));
+            box-shadow: 0 0 calc(10px + var(--music-intensity) * 50px) var(--btn-glow);
+            text-shadow: 0 0 10px rgba(255,210,125,0.5);
+        }
+        .explore-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: 0.5s;
+        }
+        .explore-btn:hover::before { left: 100%; }
+        .explore-btn:hover { background: #FFD27D; color: #000; }
+
+        .music-wrapper { position: fixed; top: 30px; left: 30px; z-index: 1000; display: flex; align-items: center; gap: 15px; }
+        
+        #musicControl {
+            background: rgba(255, 210, 125, 0.1); border: 2px solid #FFD27D;
+            border-radius: 50%; width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            backdrop-filter: blur(10px); transition: 0.2s;
+            transform: scale(calc(1 + var(--music-intensity) * 0.2));
+            box-shadow: 0 0 calc(5px + var(--music-intensity) * 30px) rgba(255, 210, 125, 0.4);
+        }
+        #musicControl svg { width: 28px; height: 28px; fill: #FFD27D; filter: drop-shadow(0 0 5px #FFD27D); }
+
+        #volumeControl {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 40px; padding: 10px 20px; display: flex; align-items: center; gap: 15px;
+            backdrop-filter: blur(10px); opacity: 0; transform: translateX(-20px);
+            pointer-events: none; transition: 0.4s;
+        }
+        .music-wrapper:hover #volumeControl { opacity: 1; transform: translateX(0); pointer-events: all; }
+        #volumeSlider { -webkit-appearance: none; width: 100px; height: 2px; background: rgba(255, 255, 255, 0.2); outline: none; }
+        #volumeSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #FFD27D; border-radius: 50%; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="greeting-overlay">
+        <div class="greeting-content">
+            <h2 class="sub-title">Wishing you a</h2>
+            <h1 class="main-title">MERRY CHRISTMAS</h1>
+            <p class="message">25-12-2025</p>
+            <button class="explore-btn" onclick="dismissGreeting()">ENTER</button>
+        </div>
+    </div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="letter-spacing: 3px; font-size: 11px;">CREATING WINTER MAGIC</p>
+    </div>
+
+    <div class="music-wrapper">
+        <button id="musicControl" onclick="toggleMusic()">
+            <svg id="musicIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div id="volumeControl">
+            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+        </div>
+    </div>
+
+    <audio id="bgMusic" loop crossorigin="anonymous">
+        <source src="./audio/christmas-music.mp3.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script id="auroraVertex" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        varying float vOpacity;
+        uniform float uTime;
+        void main() {
+            vUv = uv;
+            vec3 pos = position;
+            float wave = sin(pos.x * 0.05 + uTime * 0.5) * cos(pos.z * 0.05 + uTime * 0.3) * 5.0;
+            pos.y += wave;
+            pos.x += sin(uTime * 0.2 + pos.y * 0.1) * 2.0;
+            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script id="auroraFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float uTime;
+        uniform vec3 uColor;
+        float noise(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+        }
+        void main() {
+            float streaks = noise(vec2(vUv.x * 20.0, uTime * 0.1));
+            float fade = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+            float movement = sin(vUv.x * 10.0 + uTime) * 0.5 + 0.5;
+            float finalAlpha = fade * (streaks * 0.5 + movement * 0.5) * 0.6;
+            vec3 color = mix(uColor, vec3(0.0, 1.0, 1.0), vUv.y);
+            gl_FragColor = vec4(color, finalAlpha);
+        }
+    </script>
+
+    <script>
+        // --- MUSIC LOGIC (Giữ nguyên) ---
+        const music = document.getElementById('bgMusic');
+        const musicIcon = document.getElementById('musicIcon');
+        let isPlaying = false;
+        let isIntroFinished = false;
+        let audioCtx, analyser, dataArray;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaElementSource(music);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+        }
+
+        function updateMusicUI() {
+            if (!analyser || !isPlaying) {
+                document.documentElement.style.setProperty('--music-intensity', '0');
+                return;
+            }
+            analyser.getByteFrequencyData(dataArray);
+            let average = 0;
+            for(let i = 0; i < dataArray.length; i++) average += dataArray[i];
+            average /= dataArray.length;
+            const intensity = Math.pow(average / 150, 2); 
+            document.documentElement.style.setProperty('--music-intensity', intensity.toFixed(3));
+        }
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x010305, 0.012);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.body.appendChild(renderer.domElement);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambient);
+
+        const treeGlow = new THREE.PointLight(0xFFD27D, 3, 20);
+        treeGlow.position.set(0, 1, 0);
+        scene.add(treeGlow);
+
+        let auroraUniforms = { uTime: { value: 0 }, uColor: { value: new THREE.Color(0x00ff95) } };
+
+        function createCinematicAurora() {
+            const auroraGroup = new THREE.Group();
+            const geometry = new THREE.CylinderGeometry(120, 120, 60, 120, 20, true);
+            const mat1 = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('auroraVertex').textContent,
+                fragmentShader: document.getElementById('auroraFragment').textContent,
+                uniforms: { uTime: auroraUniforms.uTime, uColor: { value: new THREE.Color(0x22ff88) } },
+                transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+            });
+            const mat2 = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('auroraVertex').textContent,
+                fragmentShader: document.getElementById('auroraFragment').textContent,
+                uniforms: { uTime: auroraUniforms.uTime, uColor: { value: new THREE.Color(0x6633ff) } },
+                transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+            });
+            const mesh1 = new THREE.Mesh(geometry, mat1); mesh1.position.y = 35; auroraGroup.add(mesh1);
+            const mesh2 = new THREE.Mesh(geometry, mat2); mesh2.position.y = 40; mesh2.scale.set(1.1, 1.2, 1.1); mesh2.rotation.y = Math.PI;
+            auroraGroup.add(mesh2);
+            return auroraGroup;
+        }
+        scene.add(createCinematicAurora());
+
+        // --- SNOWFLAKES (Giữ nguyên) ---
+        function createDetailedSnowflake() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const size = 0.18;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const cos = Math.cos(angle); const sin = Math.sin(angle);
+                vertices.push(0, 0, 0, cos * size, sin * size, 0);
+                const bx = cos * size * 0.5; const by = sin * size * 0.5;
+                vertices.push(bx, by, 0, bx + Math.cos(angle+0.8)*0.08, by + Math.sin(angle+0.8)*0.08, 0);
+                vertices.push(bx, by, 0, bx + Math.cos(angle-0.8)*0.08, by + Math.sin(angle-0.8)*0.08, 0);
+            }
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            return geometry;
+        }
+        const snowflakeGeo = createDetailedSnowflake();
+        const snowflakes = [];
+        for(let i = 0; i < 1200; i++) {
+            const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: Math.random() * 0.8 + 0.2 });
+            const mesh = new THREE.LineSegments(snowflakeGeo, mat);
+            mesh.position.set((Math.random()-0.5)*200, Math.random()*80, (Math.random()-0.5)*200);
+            mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+            const s = Math.random() * 1.5 + 0.5;
+            mesh.scale.set(s,s,s);
+            snowflakes.push({ mesh, speed: Math.random() * 0.05 + 0.02, spin: Math.random() * 0.02 });
+            scene.add(mesh);
+        }
+
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(500, 500),
+            new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.9 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // --- UPGRADE: SANTA SYSTEM ---
+        let reindeerBase, sleighBase;
+        const activeSleighs = [];
+        let modelsLoaded = 0;
+        let flightCount = 0; // Đếm số lần bay để kích hoạt dive
+
+        const loader = new THREE.GLTFLoader();
+        
+        loader.load('./assets/christmas tree 3d model.glb', (gltf) => {
+            gltf.scene.scale.set(4, 4, 4);
+            scene.add(gltf.scene);
+            modelsLoaded++;
+            if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
+        });
+
+        loader.load('./reindeer 3d model.glb', (gltf) => {
+            reindeerBase = gltf.scene;
+            // Fix hướng cho reindeer: quay 180 độ nếu model bị ngược
+            reindeerBase.rotation.y = Math.PI; 
+            modelsLoaded++;
+            if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
+        });
+
+        loader.load('./santa sleigh 3d model.glb', (gltf) => {
+            sleighBase = gltf.scene;
+            // Fix hướng cho sleigh
+            sleighBase.rotation.y = Math.PI;
+            modelsLoaded++;
+            if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
+        });
+
+        function spawnSanta() {
+            if(!reindeerBase || !sleighBase) return;
+
+            const group = new THREE.Group();
+            
+            // 1. Cỗ xe
+            const sleigh = sleighBase.clone();
+            sleigh.scale.set(2, 2, 2);
+            group.add(sleigh);
+
+            // 2. Tuần lộc
+            const reindeers = [];
+            for(let i=0; i<6; i++) {
+                const r = reindeerBase.clone();
+                r.scale.set(1.5, 1.5, 1.5);
+                const x = (i % 2 === 0) ? 1.2 : -1.2;
+                const z = 5 + Math.floor(i/2) * 3.5; // Xếp phía trước xe (Trục Z dương)
+                r.position.set(x, 0, z);
+                group.add(r);
+                reindeers.push(r);
+            }
+
+            // Đèn gầm xe
+            const light = new THREE.PointLight(0xff0000, 10, 25);
+            light.position.set(0, 1, 0);
+            group.add(light);
+
+            // 3. LOGIC ĐƯỜNG BAY
+            let points = [];
+            flightCount++;
+
+            // Mỗi 3 lần bay hoặc lần đầu tiên sẽ có 1 lần Dive từ Aurora xuống Tree
+            if (flightCount % 3 === 1 || flightCount === 1) {
+                points = [
+                    new THREE.Vector3(-150, 60, -100), // Từ trên cao dãy Aurora
+                    new THREE.Vector3(-50, 30, -50),
+                    new THREE.Vector3(0, 8, 15),     // Sát ngọn/gần cây thông
+                    new THREE.Vector3(50, 25, 60),
+                    new THREE.Vector3(150, 70, 120)   // Vút lên trời lại
+                ];
+            } else {
+                // Bay ngẫu nhiên xung quanh không gian
+                const side = Math.random() > 0.5 ? 1 : -1;
+                points = [
+                    new THREE.Vector3(150 * side, 20 + Math.random()*30, -100),
+                    new THREE.Vector3(50 * -side, 15 + Math.random()*20, 0),
+                    new THREE.Vector3(150 * -side, 30 + Math.random()*40, 100)
+                ];
+            }
+
+            const curve = new THREE.CatmullRomCurve3(points);
+            scene.add(group);
+            activeSleighs.push({ group, reindeers, curve, progress: 0 });
+        }
+
+        function updateSleighs(time) {
+            for(let i = activeSleighs.length - 1; i >= 0; i--) {
+                const s = activeSleighs[i];
+                // GIẢM TỐC ĐỘ: từ 0.0015 xuống 0.0006 để bay chậm hơn
+                s.progress += 0.0006; 
+
+                if(s.progress >= 1) {
+                    scene.remove(s.group);
+                    activeSleighs.splice(i, 1);
+                    continue;
+                }
+
+                const pos = s.curve.getPoint(s.progress);
+                s.group.position.copy(pos);
+                
+                // Hướng mũi xe và tuần lộc đúng hướng đi
+                const lookAtPos = s.curve.getPoint(Math.min(s.progress + 0.01, 1));
+                s.group.lookAt(lookAtPos);
+
+                // Hiệu ứng tuần lộc chạy
+                s.reindeers.forEach((r, idx) => {
+                    r.position.y = Math.sin(time * 6 + idx) * 0.4;
+                });
+            }
+
+            if(isIntroFinished && activeSleighs.length === 0) {
+                // Tỉ lệ xuất hiện Santa mới sau khi kết thúc đợt bay cũ
+                if(Math.random() < 0.01) spawnSanta();
+            }
+        }
+
+        // --- INTERACTIONS (Giữ nguyên) ---
+        let targetAngleX = 0, targetAngleY = 0.2, currentAngleX = 0, currentAngleY = 0.2, isMouseDown = false, currentDistance = 180;
+        const targetDistance = 25;
+
+        window.addEventListener('mousedown', () => isMouseDown = true);
+        window.addEventListener('mouseup', () => isMouseDown = false);
+        window.addEventListener('mousemove', (e) => {
+            if(isMouseDown) {
+                targetAngleX += e.movementX * 0.005;
+                targetAngleY += e.movementY * 0.005;
+                targetAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, targetAngleY));
+            }
+        });
+
+        function dismissGreeting() {
+            initAudio();
+            document.getElementById('greeting-overlay').style.opacity = '0';
+            document.getElementById('greeting-overlay').style.pointerEvents = 'none';
+            isIntroFinished = true;
+            if (!isPlaying) toggleMusic();
+            setTimeout(spawnSanta, 1000); 
+        }
+
+        function toggleMusic() {
+            initAudio();
+            if (isPlaying) { music.pause(); musicIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; }
+            else { music.play(); musicIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; }
+            isPlaying = !isPlaying;
+        }
+
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            music.volume = e.target.value / 100;
+        });
+
+        // --- ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getElapsedTime();
+            
+            updateMusicUI();
+            auroraUniforms.uTime.value = delta;
+            updateSleighs(delta);
+
+            if (isIntroFinished) {
+                currentDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.03);
+                targetAngleX += 0.0015;
+            }
+            
+            currentAngleX = THREE.MathUtils.lerp(currentAngleX, targetAngleX, 0.1);
+            currentAngleY = THREE.MathUtils.lerp(currentAngleY, targetAngleY, 0.1);
+
+            camera.position.x = Math.sin(currentAngleX) * Math.cos(currentAngleY) * currentDistance;
+            camera.position.y = Math.sin(currentAngleY) * currentDistance + 2;
+            camera.position.z = Math.cos(currentAngleX) * Math.cos(currentAngleY) * currentDistance;
+            camera.lookAt(0, 4, 0);
+
+            snowflakes.forEach(s => {
+                s.mesh.position.y -= s.speed;
+                s.mesh.rotation.y += s.spin;
+                if(s.mesh.position.y < 0) s.mesh.position.y = 60;
+            });
+
+            treeGlow.intensity = 2 + Math.sin(delta * 2) * 1;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
