@@ -124,7 +124,7 @@
     </div>
 
     <audio id="bgMusic" loop crossorigin="anonymous">
-        <source src="./audio/christmas-music.mp3.mp3" type="audio/mpeg">
+        <source src="./audio/christmas-music.mp3" type="audio/mpeg">
     </audio>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -280,23 +280,23 @@
 
         const loader = new THREE.GLTFLoader();
         
-        loader.load('./assets/christmas_tree_3d_model.glb', (gltf) => {
-            gltf.scene.scale.set(4, 4, 4);
-            scene.add(gltf.scene);
+        loader.load('./assets/christmas_tree_3d_model.glb', (glb) => {
+            glb.scene.scale.set(4, 4, 4);
+            scene.add(glb.scene);
             modelsLoaded++;
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
         });
 
-        loader.load('./reindeer_3d_model.glb', (gltf) => {
-            reindeerBase = gltf.scene;
+        loader.load('./reindeer_3d_model.glb', (glb) => {
+            reindeerBase = glb.scene;
             // Fix hướng cho reindeer: quay 180 độ nếu model bị ngược
             reindeerBase.rotation.y = Math.PI; 
             modelsLoaded++;
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
         });
 
-        loader.load('./santa_sleigh_3d_model.glb', (gltf) => {
-            sleighBase = gltf.scene;
+        loader.load('./santa_sleigh_3d_model.glb', (glb) => {
+            sleighBase = glb.scene;
             // Fix hướng cho sleigh
             sleighBase.rotation.y = Math.PI;
             modelsLoaded++;
