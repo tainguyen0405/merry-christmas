@@ -295,7 +295,7 @@
             if(modelsLoaded >= 3) document.getElementById('loading').style.display = 'none';
         });
 
-        ('./santa_sleigh_3d_model.glb', (gltf) => {
+        loader.load('./santa_sleigh_3d_model.glb', (gltf) => {
             sleighBase = gltf.scene;
             // Fix hướng cho sleigh
             sleighBase.rotation.y = Math.PI;
